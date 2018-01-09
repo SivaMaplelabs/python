@@ -1,0 +1,50 @@
+###############################################################################
+###################### Gobblin MapReduce configurations #######################
+###############################################################################
+
+# File system URIs
+fs.uri=hdfs://192.168.10.13:8020
+writer.fs.uri=${fs.uri}
+
+job.name=PullFromKafkaMR
+job.group=PNDA
+job.description=Pulls data from all kafka topics to HDFS
+
+mr.job.max.mappers=5
+
+# ==== Kafka Source ====
+source.class=org.apache.gobblin.source.extractor.extract.kafka.KafkaSimpleSource
+source.timezone=UTC
+source.schema={"namespace": "pnda.entity",                 \
+               "type": "record",                            \
+               "name": "event",                             \
+               "fields": [                                  \
+                   {"name": "timestamp", "type": "long"},   \
+                   {"name": "src",       "type": "string"}, \
+                   {"name": "host_ip",   "type": "string"}, \
+                   {"name": "rawdata",   "type": "bytes"}   \
+               ]                                            \
+              }
+kafka.deserializer.type=BYTE_ARRAY
+
+bootstrap.with.offset=earliest
+
+# ==== Converter ====
+converter.classes=gobblin.pnda.PNDAConverter
+PNDA.quarantine.dataset.uri=dataset:hdfs://192.168.10.13:8020/user/pnda/PNDA_datasets/quarantine
+
+
+# ==== Writer ====
+writer.builder.class=gobblin.pnda.PNDAKiteWriterBuilder
+kite.writer.dataset.uri=dataset:hdfs://192.168.10.13:8020/user/pnda/PNDA_datasets/datasets
+
+# ==== Metrics ====
+metrics.enabled=true
+metrics.reporting.file.enabled=true
+
+# ==== Blacklist topics ====
+# Recent Kafka version uses internal __consumer_offsets topic, which we don't
+# want to ingest
+# Don't ingest the avro.internal.testbot topic as it's only an internal PNDA
+# testing topic
+topic.blacklist=__consumer_offsets,avro.internal.testbot
